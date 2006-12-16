@@ -2,9 +2,6 @@ package org.codehaus.dimple;
 
 import java.io.Serializable;
 
-import net.sf.cglib.proxy.Enhancer;
-import net.sf.cglib.proxy.Proxy;
-
 public class CglibImplementorTestCase extends AbstractTestCase {
   public static class Person implements Serializable {
     private static final long serialVersionUID = 1L;

@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -472,5 +473,41 @@ public class Implementor implements Serializable {
     return depth;
   }
 
+  /**
+   * Overrides an object using methods defined in impl class and the overrider object
+   * bound to "this".
+   * All interfaces of <i>obj</i> are implemented by the proxy.
+   * @param obj the object to be overriden.
+   * @param overrider the overrider.
+   * @return the proxy object.
+   */
+  public final Object override(Object obj, Object overrider){
+    Class overriden = obj.getClass();
+    return Proxy.newProxyInstance(overriden.getClassLoader(), getAllInterfaces(overriden),
+        createInvocationHandler(overrider, obj));
+  }
+
+  /**
+   * Overrides an object using the overrider object.
+   * All interfaces of <i>obj</i> are implemented by the proxy.
+   * @param obj the object to be overriden.
+   * @param overrider the overrider.
+   * @return the proxy object.
+   */
+  public static final Object overrideObject(Object obj, Object overrider){
+    return new Implementor(overrider.getClass()).override(obj, overrider);
+  }
+  /**
+   * To get all interfaces implemented by a class.
+   * @param cls the class.
+   * @return the interfaces.
+   */
+  static Class[] getAllInterfaces(Class cls) {
+    final HashSet ret = new HashSet();
+    for(;cls!=null && !Object.class.equals(cls); cls=cls.getSuperclass()){
+      ret.addAll(Arrays.asList(cls.getInterfaces()));
+    }
+    return (Class[]) ret.toArray(new Class[ret.size()]);
+  }
   private static final long serialVersionUID = -5648266362433165290L;
 }

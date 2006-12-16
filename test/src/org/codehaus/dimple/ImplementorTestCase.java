@@ -179,6 +179,46 @@ public class ImplementorTestCase extends AbstractTestCase {
     assertEquals(test, test);
     assertEquals(test, defaultTest);
   }
+  interface I1{
+    String f();
+  }
+  interface I2{
+    String g();
+  }
+  interface I3 {
+    String h();
+  }
+  class A implements I1, I2 {
+    public String f() {
+      return "f";
+    }
+
+    public String g() {
+      return "g";
+    }
+  };
+  abstract class B extends A implements I3{}
+  public void test_getAllInterfaces(){
+    assertEquals(3, Implementor.getAllInterfaces(B.class).length);
+  }
+  public void testOverride(){
+    Object orig = new B(){
+      public String h(){return "h";}
+    };
+    Object proxy = Implementor.overrideObject(orig, new Object(){
+      public String f(){
+        return "f'";
+      }
+    });
+    Class[] itfs = Implementor.getAllInterfaces(orig.getClass());
+    assertEquals(3, itfs.length);
+    I1 i1 = (I1)proxy;
+    assertEquals("f'", i1.f());
+    I2 i2 = (I2)proxy;
+    assertEquals("g",  i2.g());
+    I3 i3 = (I3)proxy;
+    assertEquals("h", i3.h());
+  }
   private void assertTest2(TestInterface test2) {
     test2.close();
     test2.setAge(10);

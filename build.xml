@@ -1,0 +1,129 @@
+
+<project name="dimple" default="test" basedir=".">
+	<property file="project.properties"/>
+  <!-- enviroment variables -->
+  <property environment="env" />
+
+  <!-- files -->
+
+  <!-- directories -->
+  <property name="src.dir" value="src" />
+  <property name="build.dir" value="build" />
+  <property name="lib.dir" value="lib" />
+  <property name="test.dir" value="test" />
+  <property name="test.lib.dir" value="${test.dir}/lib"/>
+  <property name="test.src.dir" value="${test.dir}/src" />
+  <property name="test.build.dir" value="${test.dir}/build" />
+
+
+  <!-- paths -->
+  <path id="main.compile.classpath">
+    <pathelement path="${java.class.path}"/>
+    <pathelement location="${build.dir}"/>
+    <pathelement location="${src.dir}"/>
+  	<fileset dir="${lib.dir}">
+  		<include name="**/*.jar"/>
+  	</fileset>
+  </path>
+  <path id="test.compile.classpath">
+    <path refid="main.compile.classpath"/>
+    <pathelement path="${test.src.dir}"/>
+  </path>
+  <path id="test.run.classpath">
+    <path refid="test.compile.classpath"/>
+    <pathelement location="${test.build.dir}"/>
+  </path>
+  <path id="test.nocglib.classpath">
+    <pathelement path="${java.class.path}"/>
+    <pathelement location="${build.dir}"/>
+    <pathelement location="${src.dir}"/>
+    <pathelement path="${test.src.dir}"/>
+    <pathelement location="${test.build.dir}"/>
+  	<fileset dir="${lib.dir}">
+  		<include name="**/*.jar"/>
+  		<exclude name="cglib*.jar"/>
+  	</fileset>
+	</path>
+
+  <!-- build task -->
+  <target name="build" depends="build_dir">
+		<javac srcdir="${src.dir}" destdir="${build.dir}" deprecation="on" debug="on" classpathref="main.compile.classpath"/>
+		<echo message="message : all java source file compiled successful."/>
+  </target>
+
+  <!-- test tasks -->
+  <target name="buildtest" depends="build, test_build_dir">
+		<javac srcdir="${test.src.dir}" destdir="${test.build.dir}" deprecation="on" debug="on" classpathref="test.compile.classpath"/>
+		<echo message="message : all java source file compiled successful."/>
+  </target>
+	<target name="test_nocglib" depends="buildtest">
+    <junit fork="yes" haltonfailure="yes" dir=".">
+  	  <classpath>
+  	  	<path refid="test.nocglib.classpath"/>
+  	  </classpath>
+    	<formatter type="plain" usefile="no"/>
+      <batchtest fork="yes" todir="test/report">
+        <fileset dir="test/build"
+        	includes="${test.path}/*TestCase.class, ${test.path}/*Test.class"
+        	excludes="**/*Abstract*.class, **/Cglib*.class"/>
+      </batchtest>
+    </junit>
+	</target>
+
+	<target name="test_withcglib" depends="buildtest">
+    <junit fork="yes" haltonfailure="yes" dir=".">
+  	  <classpath>
+  	  	<path refid="test.run.classpath"/>
+  	  </classpath>
+    	<formatter type="plain" usefile="no"/>
+      <batchtest fork="yes" todir="test/report">
+        <fileset dir="test/build"
+        	includes="${test.path}/Cglib*TestCase.class, ${test.path}/Cglib*Test.class"
+        	excludes="**/*Abstract*.class"/>
+      </batchtest>
+    </junit>
+	</target>
+	
+	<target name="test" depends="test_nocglib, test_withcglib"/>
+	<!-- clean -->
+  <target name="clean">
+    <delete dir="${build.dir}"/>
+    <delete dir="${test.build.dir}"/>
+  </target>
+  
+
+  <!-- make the build directory -->
+  <target name="build_dir">
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="lib"/>
+  </target>
+
+  <!-- make the tests build directory -->
+  <target name="test_build_dir">
+    <mkdir dir="${test.build.dir}"/>
+  </target>
+  <target name="doc">
+        <javadoc destdir="docs/api" access="protected" use="true" notree="false"
+        	nonavbar="false" noindex="false" splitindex="true" author="true"
+        	version="true" nodeprecatedlist="false" nodeprecated="false"
+        	packagenames="${doc.packages}"
+        	classpathref="main.compile.classpath"
+        	sourcepath="src" doctitle="${project.fullname} Documentation"/>
+  </target>
+
+  <target name="dist.prepare">
+  	<delete dir="dist"/>
+  	<mkdir dir="dist"/>
+  </target>
+  <target name="distbin" depends="build, dist.prepare">
+  	<jar destfile="dist/${project.name}-${project.version}.jar"
+  	  includes="**/*.*" basedir="build"/>
+	</target>
+  <target name="dist" depends="distbin">
+  	<zip destfile="dist/${project.name}-${project.version}.zip"
+ 		 includes="build.xml, README.txt, *.properties,
+  		src/**/*.*, test/src/**/*.*, dist/*.jar"
+  	  basedir="."/>
+  </target>
+  
+</project>

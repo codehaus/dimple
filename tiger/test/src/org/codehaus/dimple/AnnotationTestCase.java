@@ -57,6 +57,8 @@ public class AnnotationTestCase extends AbstractTestCase {
 
 
   public static class My4 extends My1 implements Serializable {
+    private static final long serialVersionUID = 1448592419307215583L;
+
     public void g(){
     }
   }

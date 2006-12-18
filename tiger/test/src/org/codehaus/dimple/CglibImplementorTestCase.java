@@ -27,7 +27,8 @@ public class CglibImplementorTestCase extends AbstractTestCase {
   }
   public void testOverride(){
     Person tom = new Person("tom", 10);
-    Person tommy = (Person)Implementor.proxy(Person.class, new Object(){
+    Person tommy = Implementor.proxy(Person.class, new Object(){
+      @SuppressWarnings("unused")
       public String getName(){
         return "tommy";
       }
@@ -46,13 +47,13 @@ public class CglibImplementorTestCase extends AbstractTestCase {
   public void testCglibProxyIsSerializable()
   throws Exception{
     Person tom = new Person("tom", 10);
-    Person tommy = (Person)Implementor.proxy(Person.class, new Tommy(), tom);
+    Person tommy = Implementor.proxy(Person.class, new Tommy(), tom);
     assertSerializable(tommy);
     assertSerializable(Implementor.proxy(Person.class, new Tommy()));
   }
   public void testDefaultObjectMethodsUsed(){
-    final Person test = (Person)new Implementor(Tommy.class)
-    .implement(Person.class, new Tommy());
+    final Person test = Implementor.instance(Tommy.class)
+      .implement(Person.class, new Tommy());
     test.hashCode();
     test.toString();
     //this is because cglib proxy not unwrapped.
@@ -61,7 +62,7 @@ public class CglibImplementorTestCase extends AbstractTestCase {
   public void testObjectMethodsDelegated(){
     final int HASHCODE = 31415926;
     final String STR = "TEST";
-    Person defaultTest = (Person)Implementor.proxy(Person.class, new Object(){
+    Person defaultTest = Implementor.proxy(Person.class, new Object(){
       public int hashCode(){
         return HASHCODE; 
       }
@@ -78,7 +79,7 @@ public class CglibImplementorTestCase extends AbstractTestCase {
     assertEquals(HASHCODE, defaultTest.hashCode());
     assertEquals(STR, defaultTest.toString());
     assertEquals(defaultTest, "doesnt matter");
-    Person test = (Person)Implementor.proxy(Person.class, new Object(){
+    Person test = Implementor.proxy(Person.class, new Object(){
       public int hashCode(){
         return HASHCODE*10;
       }

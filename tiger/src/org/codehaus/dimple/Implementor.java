@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 /**
@@ -52,7 +51,7 @@ import java.util.Map;
  * @author Ben Yu
  * Dec 9, 2006 11:27:44 PM
  */
-public class Implementor implements Serializable {
+public class Implementor<ImplClass> implements Serializable {
   /**
    * Equivalent as new Implementor(with.getClass()).implementWithDefaultHandler(itf, with, defaultHandler)
    * <p>
@@ -60,8 +59,8 @@ public class Implementor implements Serializable {
    * As the constructor of Implementor may be expensive, it is recommended to create an Implementor object once
    * and then use it repeatedly.
    */
-  public static Object proxyWithDefaultHandler(Class asType, Object with, InvocationHandler defaultHandler) {
-    return new Implementor(with.getClass()).implementWithDefaultHandler(asType, with, defaultHandler);
+  public static <T, ImplClass> T proxyWithDefaultHandler(Class<T> asType, ImplClass with, InvocationHandler defaultHandler) {
+    return getInstanceForImplObject(with).implementWithDefaultHandler(asType, with, defaultHandler);
   }
   /**
    * Equivalent as new Implementor(with.getClass()).implement(asType, with, defaultDelegate)
@@ -70,12 +69,12 @@ public class Implementor implements Serializable {
    * As the constructor of Implementor may be expensive, it is recommended to create an Implementor object once
    * and then use it repeatedly.
    */
-  public static Object proxy(Class asType, Object with, Object defaultDelegate){
+  public static <T, ImplClass> T proxy(Class<T> asType, ImplClass with, Object defaultDelegate){
     if(!asType.isInstance(defaultDelegate)){
       throw new IllegalArgumentException("default delegate of type "+asType.getName() + " expected, "
           + ((defaultDelegate==null)?null:defaultDelegate.getClass().getName())+" encountered");
     }
-    return new Implementor(with.getClass()).implement(asType, with, defaultDelegate);
+    return getInstanceForImplObject(with).implement(asType, with, defaultDelegate);
   }
   
   /**
@@ -85,10 +84,14 @@ public class Implementor implements Serializable {
    * As the constructor of Implementor may be expensive, it is recommended to create an Implementor object once
    * and then use it repeatedly. 
    */
-  public static Object proxy(Class asType, Object with) {
-    return new Implementor(with.getClass()).implement(asType, with);
+  public static <T, ImplClass> T proxy(Class<T> asType, ImplClass with) {
+    return getInstanceForImplObject(with).implement(asType, with);
   }
 
+  @SuppressWarnings("unchecked")
+  private static <ImplClass> Implementor<ImplClass> getInstanceForImplObject(ImplClass with){
+    return new Implementor<ImplClass>((Class<ImplClass>)with.getClass());
+  }
   /**
    * create a dynamic proxy that implements <i>asType</i> by calling <i>with</i>
    * if a method is implemented by the impl class.
@@ -99,7 +102,8 @@ public class Implementor implements Serializable {
    * @param defaultDelegate the default delegate.
    * @return the dynamic proxy that implements <i>asType</i>.
    */
-  public Object implement(Class asType, Object with, Object defaultDelegate) {
+  public <T> T implement(Class<T> asType, ImplClass with, Object defaultDelegate) {
+    checkImplementingMethods(asType);
     return newProxyInstance(with.getClass().getClassLoader(), asType, 
         createInvocationHandler(with, defaultDelegate));
   }
@@ -113,7 +117,8 @@ public class Implementor implements Serializable {
    * @param defaultHandler the default InvocationHandler.
    * @return the dynamic proxy that implements <i>asType</i>.
    */
-  public Object implementWithDefaultHandler(Class asType, Object with, InvocationHandler defaultHandler) {
+  public <T> T implementWithDefaultHandler(Class<T> asType, ImplClass with, InvocationHandler defaultHandler) {
+    checkImplementingMethods(asType);
     return newProxyInstance(with.getClass().getClassLoader(), asType, 
         createInvocationHandlerWithDefaultHandler(with, defaultHandler));
   }
@@ -126,7 +131,8 @@ public class Implementor implements Serializable {
    * @param with the instance of the impl class.
    * @return the dynamic proxy that implements <i>asType</i>.
    */
-  public Object implement(Class asType, Object with){
+  public <T> T implement(Class<T> asType, ImplClass with){
+    checkImplementingMethods(asType);
     return newProxyInstance(with.getClass().getClassLoader(), asType, 
         createInvocationHandler(with));
   }
@@ -138,7 +144,7 @@ public class Implementor implements Serializable {
    * @param instance the instance of the impl class.
    * @return the InvocationHandler object.
    */
-  public InvocationHandler createInvocationHandler(final Object instance){
+  public InvocationHandler createInvocationHandler(final ImplClass instance){
     return createInvocationHandlerWithDefaultHandler(instance, 
         (instance instanceof InvocationHandler)?(InvocationHandler)instance:null);
   }
@@ -151,7 +157,7 @@ public class Implementor implements Serializable {
    * If null, UnsupportedOperationException is thrown.
    * @return the InvocationHandler object.
    */
-  public InvocationHandler createInvocationHandlerWithDefaultHandler(final Object instance, final InvocationHandler defaultHandler){
+  public InvocationHandler createInvocationHandlerWithDefaultHandler(final ImplClass instance, final InvocationHandler defaultHandler){
     return createInvocationHandlerWithDefaults(instance, null, defaultHandler);
   }
   /**
@@ -162,10 +168,10 @@ public class Implementor implements Serializable {
    * @param defaultDelegate the default delegate. If null, UnsupportedOperationException is thrown.
    * @return the InvocationHandler object.
    */
-  public InvocationHandler createInvocationHandler(final Object instance, Object defaultDelegate){
+  public InvocationHandler createInvocationHandler(final ImplClass instance, Object defaultDelegate){
     return createInvocationHandlerWithDefaults(instance, defaultDelegate, null);
   }
-  InvocationHandler createInvocationHandlerWithDefaults(Object instance, Object defaultDelegate, InvocationHandler defaultHandler){
+  InvocationHandler createInvocationHandlerWithDefaults(ImplClass instance, Object defaultDelegate, InvocationHandler defaultHandler){
     checkInstanceType(instance);
     return new ImplInvocationHandler(instance, defaultDelegate, defaultHandler);
   }
@@ -179,10 +185,19 @@ public class Implementor implements Serializable {
    * To create an Implementor class.
    * @param implClass the class used to implement.
    */
-  public Implementor(Class implClass){
+  public Implementor(Class<ImplClass> implClass){
     this.implClass = implClass;
     addClass(implClass);
     sort();
+  }
+  /**
+   * Convenience method to create an Implementor object.
+   * @param <ImplClass> the impl class.
+   * @param implClass the iml class object.
+   * @return the Implementor object.
+   */
+  public static <ImplClass> Implementor<ImplClass> instance(Class<ImplClass> implClass){
+    return new Implementor<ImplClass>(implClass);
   }
   public boolean equals(Object obj){
     if(obj instanceof Implementor){
@@ -200,10 +215,10 @@ public class Implementor implements Serializable {
   /**
    * Get the impl class, which is the class whose public methods are used to implement target interface. 
    */
-  public Class getImplClass(){
+  public Class<ImplClass> getImplClass(){
     return implClass;
   }
-  void addClass(Class cls) {
+  void addClass(Class<?> cls) {
     final boolean force = !Modifier.isPublic(cls.getModifiers());
     final Method[] mtds = cls.getMethods();
     for (int i = 0; i < mtds.length; i++) {
@@ -218,8 +233,9 @@ public class Implementor implements Serializable {
     }
     catch(SecurityException e){}
   }
-  private final Class implClass;
-  private final Map methods = new HashMap();
+  private final Class<ImplClass> implClass;
+  private final Map<String, List<MyMethod>> methods = new HashMap<String, List<MyMethod>>();
+  private final ArrayList<MyMethod> mustUses = new ArrayList<MyMethod>();
   private final class ImplInvocationHandler implements InvocationHandler, Serializable, Ref {
     private static final long serialVersionUID = 7723292911817172565L;
     private final Object instance;
@@ -339,7 +355,9 @@ public class Implementor implements Serializable {
     public long getDepth(){
       return depth;
     }
-
+    public Class getReturnType() {
+      return method.getReturnType();
+    }
     private void writeObject(java.io.ObjectOutputStream out)
     throws java.io.IOException{
       out.defaultWriteObject();
@@ -365,37 +383,49 @@ public class Implementor implements Serializable {
   }
   void addMethod(Method mtd){
     final String name = mtd.getName();
-    List suite = (List) methods.get(name);
+    List<MyMethod> suite = methods.get(name);
     if(suite==null){
-      suite = new ArrayList();
+      suite = new ArrayList<MyMethod>();
       methods.put(name, suite);
     }
-    suite.add(new MyMethod(mtd));
+    MyMethod mm = new MyMethod(mtd); 
+    suite.add(mm);
+    checkAnnotation(mm);
+  }
+  private void checkAnnotation(MyMethod mm) {
+    Method mtd = mm.getMethod();
+    //add mustUses
+    Implement annotation = mtd.getAnnotation(Implement.class);
+    if(annotation == null) {
+      annotation = mtd.getDeclaringClass().getAnnotation(Implement.class);
+    }
+    if(annotation != null) {
+      mustUses.add(mm);
+    }
   }
   void sort(){
-    for(Iterator it = methods.values().iterator(); it.hasNext();){
-      final List suite = (List)it.next();
+    for(List<MyMethod> suite : methods.values()){
       sortMethods(suite);
     }
   }
-  private static final Comparator SUB_PARAM_TYPES_FIRST = new Comparator(){
-    public int compare(Object arg0, Object arg1) {
-      return compareMyMethod((MyMethod)arg0, (MyMethod)arg1);
+  private static final Comparator<MyMethod> SUB_PARAM_TYPES_FIRST = new Comparator<MyMethod>(){
+    public int compare(MyMethod m1, MyMethod m2) {
+      return compareMyMethod(m1, m2);
     }
   };
   private static int compareMyMethod(MyMethod m1, MyMethod m2){
     return compareParameterTypes(m1.getParameterTypes(), m1.getDepth(), 
         m2.getParameterTypes(), m2.getDepth());
   }
-  static int compareParameterTypes(final Class[] params1, long depth1, 
-      final Class[] params2, long depth2) {
+  static int compareParameterTypes(final Class<?>[] params1, long depth1, 
+      final Class<?>[] params2, long depth2) {
     if(params1.length > params2.length) return -1;
     if(params1.length < params2.length) return 1;
     if(depth1 > depth2) return -1;
     if(depth1 < depth2) return 1;
     return 0;
   }
-  private static void sortMethods(List suite){
+  private static void sortMethods(List<MyMethod> suite){
     Collections.sort(suite, SUB_PARAM_TYPES_FIRST);
   }
   /**
@@ -405,12 +435,12 @@ public class Implementor implements Serializable {
    */
   public Method lookupImplementingMethod(Method implemented) {
     final String name = implemented.getName();
-    final List suite = (List)methods.get(name);
+    final List<MyMethod> suite = methods.get(name);
     if(suite==null) return null;
     final int size = suite.size();
     final Class[] implementedParamTypes = implemented.getParameterTypes();
     for(int i=0; i<size; i++){
-      final MyMethod mm = (MyMethod)suite.get(i);
+      final MyMethod mm = suite.get(i);
       final Class[] withParamTypes = mm.getParameterTypes();
       if(isParamsCompatible(withParamTypes, implementedParamTypes)){
         return mm.getMethod();
@@ -425,28 +455,89 @@ public class Implementor implements Serializable {
    * @param handler the InvocationHandler to handle calls.
    * @return the proxy instance.
    */
-  public static Object newProxyInstance(ClassLoader loader, Class asType, InvocationHandler handler){
+  @SuppressWarnings("unchecked")
+  public static <T> T newProxyInstance(ClassLoader loader, Class<T> asType, InvocationHandler handler){
     if(asType.isInterface()){
-      return Proxy.newProxyInstance(loader, new Class[]{asType}, handler);
+      return (T)Proxy.newProxyInstance(loader, new Class[]{asType}, handler);
     }
     else {
-      return CglibUtils.proxy(loader, asType, handler);
+      return (T)CglibUtils.proxy(loader, asType, handler);
     }
   }
-  static boolean isParamsCompatible(Class[] with, Class[] implemented){
+  private interface ObjectMethods {
+    boolean equals(Object obj);
+    int hashCode();
+    String toString();
+  }
+  private static final List<Method> objectMethodsSignatures = 
+    Arrays.asList(ObjectMethods.class.getMethods());
+  /**
+   * Makes sure that methods defined by ImplClass implement some method
+   * in <i>asType</i>.
+   * This checking is only performed on methods annotated by Implement.
+   * @param asType the interface to implement.
+   */
+  public void checkImplementingMethods(Class<?> asType)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    if(mustUses.isEmpty()) return;
+    checkImplementingMethods(new Class[]{asType});
+  }
+  /**
+   * Makes sure that methods defined by ImplClass implement some method
+   * in any Class object in <i>asTypes</i>.
+   * This checking is only performed on methods annotated by Implement.
+   * @param asTypes the interfaces to implement.
+   */
+  public void checkImplementingMethods(Class<?>[] asTypes)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    if(mustUses.isEmpty()) return;
+    ArrayList<Method> allmethods = new ArrayList<Method>();
+    for(Class<?> asType : asTypes) {
+      allmethods.addAll(Arrays.asList(asType.getMethods()));
+    }
+    allmethods.addAll(objectMethodsSignatures);
+    checkImplementingMethods((Method[]) allmethods.toArray(new Method[allmethods.size()]));
+  }
+  void checkImplementingMethods(Method[] implemented)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    final Class<?>[][] paramTypesArray = new Class<?>[implemented.length][];
+    for(int i=0; i<implemented.length; i++){
+      paramTypesArray[i] = implemented[i].getParameterTypes();
+    }
+    for(MyMethod mm : mustUses) {
+      checkImplementingMethods(mm, implemented, paramTypesArray);
+    }
+  }
+  private void checkImplementingMethods(MyMethod implementing, Method[] implemented, Class<?>[][] parameterTypesArray)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    Class[] implementingParams = implementing.getParameterTypes();
+    Class returnType = implementing.getReturnType();
+    String name = implementing.getMethod().getName();
+    for(int i=0; i<implemented.length; i++) {
+      Method mtd = implemented[i];
+      Class<?>[] implementedParams = parameterTypesArray[i];
+      if(name.equals(mtd.getName()) && isParamsCompatible(implementingParams, implementedParams)){
+        if(!isReturnTypeCompatible(returnType, mtd.getReturnType())) {
+          throw new InvalidReturnTypeException(mtd, implementing.getMethod());
+        }
+        return;
+      }
+    }
+    throw new UnusedMethodException(implementing.getMethod());
+  }
+  static boolean isParamsCompatible(Class<?>[] with, Class<?>[] implemented){
     if(with.length!=implemented.length) return false;
     for (int i = 0; i < implemented.length; i++) {
       if(!with[i].isAssignableFrom(implemented[i])) return false;
     }
     return true;
   }
-  /*
-  private static boolean isReturnTypeCompatible(Class with, Class implemented){
+  static boolean isReturnTypeCompatible(Class<?> with, Class<?> implemented){
     if(void.class.equals(implemented)){
       return true;
     }
     return implemented.isAssignableFrom(with);
-  }*/
+  }
   static long getHierarchyDepthSum(Class[] classes){
     long sum = 0;
     for (int i = 0; i < classes.length; i++) {
@@ -464,8 +555,8 @@ public class Implementor implements Serializable {
       depth = superDepth;
     }
     final Class[] itfs = c.getInterfaces();
-    for(int i=0; i<itfs.length; i++){
-      int itfDepth = 1+getHierarchyDepth(itfs[i]);
+    for(Class itf : itfs){
+      int itfDepth = 1+getHierarchyDepth(itf);
       if(itfDepth>depth){
         depth = itfDepth;
       }
@@ -481,9 +572,11 @@ public class Implementor implements Serializable {
    * @param overrider the overrider.
    * @return the proxy object.
    */
-  public final Object override(Object obj, Object overrider){
+  public final Object override(Object obj, ImplClass overrider){
     Class overriden = obj.getClass();
-    return Proxy.newProxyInstance(overriden.getClassLoader(), getAllInterfaces(overriden),
+    final Class[] itfs = getAllInterfaces(overriden);
+    checkImplementingMethods(itfs);
+    return Proxy.newProxyInstance(overriden.getClassLoader(), itfs,
         createInvocationHandler(overrider, obj));
   }
 
@@ -494,20 +587,20 @@ public class Implementor implements Serializable {
    * @param overrider the overrider.
    * @return the proxy object.
    */
-  public static final Object overrideObject(Object obj, Object overrider){
-    return new Implementor(overrider.getClass()).override(obj, overrider);
+  public static <ImplClass> Object overrideObject(Object obj, ImplClass overrider){
+    return getInstanceForImplObject(overrider).override(obj, overrider);
   }
   /**
    * To get all interfaces implemented by a class.
    * @param cls the class.
    * @return the interfaces.
    */
-  static Class[] getAllInterfaces(Class cls) {
-    final HashSet ret = new HashSet();
+  static Class<?>[] getAllInterfaces(Class<?> cls) {
+    final HashSet<Class> ret = new HashSet<Class>();
     for(;cls!=null && !Object.class.equals(cls); cls=cls.getSuperclass()){
       ret.addAll(Arrays.asList(cls.getInterfaces()));
     }
-    return (Class[]) ret.toArray(new Class[ret.size()]);
+    return (Class<?>[]) ret.toArray(new Class<?>[ret.size()]);
   }
   private static final long serialVersionUID = -5648266362433165290L;
 }

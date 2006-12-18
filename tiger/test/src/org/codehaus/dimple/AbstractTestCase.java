@@ -10,14 +10,16 @@ import java.util.HashMap;
 import junit.framework.TestCase;
 
 abstract class AbstractTestCase extends TestCase {
-  public static Object assertSerializable(Object obj) throws IOException, ClassNotFoundException {
+  @SuppressWarnings("unchecked")
+  public static <T> T assertSerializable(T obj) throws IOException, ClassNotFoundException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(baos);
     oos.writeObject(obj);
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     ObjectInputStream ois = new ObjectInputStream(bais);
-    return ois.readObject();
+    return (T)ois.readObject();
   }
+  @SuppressWarnings("unchecked")
   public static void assertHashable(Object obj){
     HashMap hm = new HashMap();
     Object val = "value";

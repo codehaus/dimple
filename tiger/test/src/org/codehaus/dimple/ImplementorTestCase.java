@@ -19,18 +19,19 @@ public class ImplementorTestCase extends AbstractTestCase {
   }
   public void testImplementorSerializable()
   throws Exception {
-    Implementor Implementor = new Implementor(ImplementorTestCase.class);
-    assertEquals(Implementor, new Implementor(ImplementorTestCase.class));
-    Implementor cloned = (Implementor)assertSerializable(Implementor);
-    assertEquals(Implementor, cloned);
+    Implementor<ImplementorTestCase> implementor = Implementor.instance(ImplementorTestCase.class);
+    assertEquals(implementor, Implementor.instance(ImplementorTestCase.class));
+    Implementor<ImplementorTestCase> cloned = assertSerializable(implementor);
+    assertEquals(implementor, cloned);
   }
   public void testImplementorHashable(){
-    assertHashable(new Implementor(ImplementorTestCase.class));
+    assertHashable(Implementor.instance(ImplementorTestCase.class));
   }
   public void testConnectionImplementor()
   throws Exception {
     final String TEST = "test";
-    Connection conn = (Connection)Implementor.proxy(Connection.class, new Object(){
+    Connection conn = Implementor.proxy(Connection.class, new Object(){
+      @SuppressWarnings("unused")
       public boolean close(){
         return true;
       }
@@ -84,34 +85,36 @@ public class ImplementorTestCase extends AbstractTestCase {
     }
   }
   public void testImplementorSupportsContravariantParameters(){
-    Implementor impl1 = new Implementor(Test1.class);
-    TestInterface test1 = (TestInterface)impl1.implement(TestInterface.class, new Test1());
+    Implementor<Test1> impl1 = Implementor.instance(Test1.class);
+    TestInterface test1 = impl1.implement(TestInterface.class, new Test1());
     test1.close();
     test1.setAge(10);
     assertEquals(10, test1.getAge());
     assertEquals("10", test1.getName("x", new Integer(1)));
     
-    Implementor impl2 = new Implementor(Test2.class);
-    TestInterface test2 = (TestInterface)impl2.implement(TestInterface.class, new Test2());
+    Implementor<Test2> impl2 = Implementor.instance(Test2.class);
+    TestInterface test2 = impl2.implement(TestInterface.class, new Test2());
     assertTest2(test2);
     
 
-    Implementor impl3 = new Implementor(Test3.class);
-    TestInterface test3 = (TestInterface)impl3.implement(TestInterface.class, new Test3());
+    Implementor<Test3> impl3 = Implementor.instance(Test3.class);
+    TestInterface test3 = impl3.implement(TestInterface.class, new Test3());
     assertTest2(test3);
     
   }
   public void testImplementorProxyIsSerializable()
   throws Exception {
-    TestInterface test = (TestInterface)assertSerializable(Implementor.proxy(TestInterface.class, new Test1()));
+    TestInterface test = assertSerializable(Implementor.proxy(TestInterface.class, new Test1()));
     assertSerializable(Implementor.proxy(TestInterface.class, new Test1(), test));
   }
   public void testImplementorWithDefaultHandler(){
-    TestInterface test = (TestInterface)Implementor.proxy(TestInterface.class, new InvocationHandler(){
+    TestInterface test = Implementor.proxy(TestInterface.class, new InvocationHandler(){
       private int age;
+      @SuppressWarnings("unused")
       public int getAge(){
         return age;
       }
+      @SuppressWarnings("unused")
       public String getName(String a, Object b){
         return a+b;
       }
@@ -129,8 +132,9 @@ public class ImplementorTestCase extends AbstractTestCase {
   }
   public void testImplementorWithDefaultDelegate()
   throws Exception {
-    final TestInterface defaultTest = (TestInterface)new Implementor(Test1.class).implement(TestInterface.class, new Test1());
-    TestInterface test = (TestInterface)Implementor.proxy(TestInterface.class, new Object(){
+    final TestInterface defaultTest = Implementor.instance(Test1.class).implement(TestInterface.class, new Test1());
+    TestInterface test = Implementor.proxy(TestInterface.class, new Object(){
+      @SuppressWarnings("unused")
       public int getAge(){
         return defaultTest.getAge()+1;
       }
@@ -141,8 +145,8 @@ public class ImplementorTestCase extends AbstractTestCase {
     assertEquals("10", test.getName("x", new Integer(1)));
   }
   public void testDefaultObjectMethodsUsed(){
-    final TestInterface test = (TestInterface)new Implementor(Test1.class)
-    .implement(TestInterface.class, new Test1());
+    final TestInterface test = Implementor.instance(Test1.class)
+      .implement(TestInterface.class, new Test1());
     test.hashCode();
     test.toString();
     assertEquals(test, test);
@@ -150,7 +154,7 @@ public class ImplementorTestCase extends AbstractTestCase {
   public void testObjectMethodsDelegated(){
     final int HASHCODE = 31415926;
     final String STR = "TEST";
-    TestInterface defaultTest = (TestInterface)Implementor.proxy(TestInterface.class, new Object(){
+    TestInterface defaultTest = Implementor.proxy(TestInterface.class, new Object(){
       public int hashCode(){
         return HASHCODE; 
       }
@@ -168,7 +172,7 @@ public class ImplementorTestCase extends AbstractTestCase {
     assertEquals(STR, defaultTest.toString());
     assertEquals(defaultTest, "doesnt matter");
     assertEquals(defaultTest, defaultTest);
-    TestInterface test = (TestInterface)Implementor.proxy(TestInterface.class, new Object(){
+    TestInterface test = Implementor.proxy(TestInterface.class, new Object(){
       public int hashCode(){
         return HASHCODE*10;
       }
@@ -206,6 +210,7 @@ public class ImplementorTestCase extends AbstractTestCase {
       public String h(){return "h";}
     };
     Object proxy = Implementor.overrideObject(orig, new Object(){
+      @SuppressWarnings("unused")
       public String f(){
         return "f'";
       }

@@ -35,8 +35,9 @@ class CglibUtils {
    * @param handler the InvocationHandler to handle calls.
    * @return the proxy object.
    */
-  public static Object proxy(
-      ClassLoader loader, Class superclass, Class[] interfaces, InvocationHandler handler){
+  @SuppressWarnings("unchecked")
+  public static <Super> Super proxy(
+      ClassLoader loader, Class<Super> superclass, Class<?>[] interfaces, InvocationHandler handler){
     Enhancer enhancer = new Enhancer();
     enhancer.setCallback(new CglibInvocationHandlerAdapter(handler));
     enhancer.setClassLoader(loader);
@@ -44,7 +45,7 @@ class CglibUtils {
       enhancer.setInterfaces(interfaces);
     if(superclass != null)
       enhancer.setSuperclass(superclass);
-    return enhancer.create();
+    return (Super)enhancer.create();
   }
   /**
    * To create a proxy using cglib enhancement.
@@ -53,7 +54,7 @@ class CglibUtils {
    * @param handler the InvocationHandler to handle calls.
    * @return the proxy object.
    */
-  public static Object proxy(ClassLoader loader, Class superclass, InvocationHandler handler){
+  public static <Super> Super proxy(ClassLoader loader, Class<Super> superclass, InvocationHandler handler){
     return proxy(loader, superclass, null, handler);
   }
 }

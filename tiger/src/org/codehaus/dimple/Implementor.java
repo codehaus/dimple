@@ -40,7 +40,7 @@ import java.util.Map;
  * For example:
  * <pre> 
  * Connection realConn = ...;
- * Connection nonCloseableConnection = (Connection)Implementor.proxy(Connection.class, new Object(){
+ * Connection nonCloseableConnection = Implementor.proxy(Connection.class, new Object(){
  *   public void close() {
  *     //we intercept close() call and do nothing.
  *   }

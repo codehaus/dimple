@@ -19,10 +19,10 @@ public class ImplementorTestCase extends AbstractTestCase {
   }
   public void testImplementorSerializable()
   throws Exception {
-    Implementor Implementor = new Implementor(ImplementorTestCase.class);
-    assertEquals(Implementor, new Implementor(ImplementorTestCase.class));
-    Implementor cloned = (Implementor)assertSerializable(Implementor);
-    assertEquals(Implementor, cloned);
+    Implementor implementor = new Implementor(ImplementorTestCase.class);
+    assertEquals(implementor, new Implementor(ImplementorTestCase.class));
+    Implementor cloned = (Implementor)assertSerializable(implementor);
+    assertEquals(implementor, cloned);
   }
   public void testImplementorHashable(){
     assertHashable(new Implementor(ImplementorTestCase.class));

@@ -69,7 +69,7 @@ public class Implementor<ImplClass> implements Serializable {
    * As the constructor of Implementor may be expensive, it is recommended to create an Implementor object once
    * and then use it repeatedly.
    */
-  public static <T, ImplClass> T proxy(Class<T> asType, ImplClass with, Object defaultDelegate){
+  public static <T, ImplClass> T proxy(Class<T> asType, ImplClass with, T defaultDelegate){
     if(!asType.isInstance(defaultDelegate)){
       throw new IllegalArgumentException("default delegate of type "+asType.getName() + " expected, "
           + ((defaultDelegate==null)?null:defaultDelegate.getClass().getName())+" encountered");
@@ -102,7 +102,7 @@ public class Implementor<ImplClass> implements Serializable {
    * @param defaultDelegate the default delegate.
    * @return the dynamic proxy that implements <i>asType</i>.
    */
-  public <T> T implement(Class<T> asType, ImplClass with, Object defaultDelegate) {
+  public <T> T implement(Class<T> asType, ImplClass with, T defaultDelegate) {
     checkImplementingMethods(asType);
     return newProxyInstance(with.getClass().getClassLoader(), asType, 
         createInvocationHandler(with, defaultDelegate));

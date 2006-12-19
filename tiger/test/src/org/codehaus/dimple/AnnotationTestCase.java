@@ -47,6 +47,13 @@ public class AnnotationTestCase extends AbstractTestCase {
   public void testMethodsAnnotatedInSuperClassIsAlsoChecked()
   throws Exception{
     try{
+      Implementor.willImplement(My3.class, I1.class);
+      fail("should have failed");
+    }
+    catch(UnusedMethodException e){
+      assertEquals(My3.class.getMethod("g", new Class[0]), e.getMethod());
+    }
+    try{
       Implementor.proxy(I1.class, new My3());
       fail("should have failed");
     }
@@ -97,11 +104,10 @@ public class AnnotationTestCase extends AbstractTestCase {
   }  
   public void testObjectMethodsInAnnotatedClassAreNotNecessaryToBeUsed(){
     My6 m6 = new My6();
-    I1 i1 = Implementor.proxy(I1.class, m6);
+    I1 i1 = Implementor.proxy(Implementor.implementedBy(I1.class, My6.class), m6);
     assertEquals("my6", i1.f());
     assertEquals(6, i1.hashCode());
   }
-  
   public interface I2 {
     boolean compare(String s, Object obj);
   }
@@ -124,15 +130,27 @@ public class AnnotationTestCase extends AbstractTestCase {
     verifyBadReturnType(new SubBadReturnType());
   }
   private void verifyBadReturnType(Object badReturnTypeObj) throws NoSuchMethodException {
+
+    try{
+      Implementor.willImplement(badReturnTypeObj.getClass(), I2.class);
+      fail("should have failed");
+    }
+    catch(InvalidReturnTypeException e){
+      verifyError(e);
+    }
+    
     try{
       Implementor.proxy(I2.class, badReturnTypeObj);
       fail("should have failed");
     }
     catch(InvalidReturnTypeException e){
-      assertEquals(BadReturnType.class.getMethod("compare", new Class[]{Comparable.class, Object.class}),
-          e.getImplementingMethod());
-      assertEquals(I2.class.getMethod("compare", new Class[]{String.class, Object.class}), 
-          e.getImplementedMethod());
+      verifyError(e);
     }
+  }
+  private void verifyError(InvalidReturnTypeException e) throws NoSuchMethodException {
+    assertEquals(BadReturnType.class.getMethod("compare", new Class[]{Comparable.class, Object.class}),
+        e.getImplementingMethod());
+    assertEquals(I2.class.getMethod("compare", new Class[]{String.class, Object.class}), 
+        e.getImplementedMethod());
   }
 }

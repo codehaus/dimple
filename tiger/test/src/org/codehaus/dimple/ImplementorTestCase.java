@@ -85,8 +85,8 @@ public class ImplementorTestCase extends AbstractTestCase {
     }
   }
   public void testImplementorSupportsContravariantParameters(){
-    Implementor<Test1> impl1 = Implementor.instance(Test1.class);
-    TestInterface test1 = impl1.implement(TestInterface.class, new Test1());
+    Implementor<Test1> impl1 = Implementor.instance(Implementor.willImplement(Test1.class, TestInterface.class));
+    TestInterface test1 = impl1.implement(Implementor.implementedBy(TestInterface.class, Test1.class), new Test1());
     test1.close();
     test1.setAge(10);
     assertEquals(10, test1.getAge());
@@ -224,6 +224,42 @@ public class ImplementorTestCase extends AbstractTestCase {
     I3 i3 = (I3)proxy;
     assertEquals("h", i3.h());
   }
+  public class ImplWithExtraMethod {
+    public String f(){
+      return "my6";
+    }
+    public String extra(){return null;}
+  }
+  public void testImplementedByWillThrowExceptionForExtraMethod(){
+    try{
+      Class<I1> ret = Implementor.implementedBy(I1.class, ImplWithExtraMethod.class);
+      fail("should have failed");
+    }
+    catch(UnusedMethodException e){}
+    try{
+      Class<ImplWithExtraMethod> ret = Implementor.willImplement(ImplWithExtraMethod.class, I1.class);
+      fail("should have failed");
+    }
+    catch(UnusedMethodException e){}
+  }
+  public class ImplWithBadReturnType {
+    public int f(){return 1;}
+  }
+
+  public void testImplementedByWillThrowExceptionForInvalidReturnType(){
+    try{
+      Implementor.implementedBy(I1.class, ImplWithBadReturnType.class);
+      fail("should have failed");
+    }
+    catch(InvalidReturnTypeException e){}
+    try{
+      Implementor.willImplement(ImplWithBadReturnType.class, I1.class);
+      fail("should have failed");
+    }
+    catch(InvalidReturnTypeException e){}
+  }
+  
+
   private void assertTest2(TestInterface test2) {
     test2.close();
     test2.setAge(10);

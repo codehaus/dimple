@@ -3,7 +3,7 @@ package org.codehaus.dimple;
 import java.lang.reflect.Method;
 
 /**
- * This exception indicates that a declared method annotated as Implement
+ * This exception indicates that a declared method
  * is not used to implement anything.
  * <p>
  * @author Ben Yu

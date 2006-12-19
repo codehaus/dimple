@@ -480,7 +480,7 @@ public class Implementor<ImplClass> implements Serializable {
   public void checkImplementingMethods(Class<?> asType)
   throws InvalidReturnTypeException, UnusedMethodException {
     if(mustUses.isEmpty()) return;
-    checkImplementingMethods(new Class[]{asType});
+    checkImplementingMethods(new Class<?>[]{asType});
   }
   /**
    * Makes sure that methods defined by ImplClass implement some method
@@ -488,42 +488,99 @@ public class Implementor<ImplClass> implements Serializable {
    * This checking is only performed on methods annotated by Implement.
    * @param asTypes the interfaces to implement.
    */
-  public void checkImplementingMethods(Class<?>[] asTypes)
+  public void checkImplementingMethods(Class<?>... asTypes)
   throws InvalidReturnTypeException, UnusedMethodException {
     if(mustUses.isEmpty()) return;
+    checkImplementingMethods(getAllMethodsToImplement(asTypes));
+  }
+  /**
+   * To assert that all methods in <i>implClass</i> will properly
+   * implement some method in <i>asType</i>
+   * @return the <i>asType</i>
+   * @throws InvalidReturnTypeException
+   * @throws UnusedMethodException
+   */
+  public static <T> Class<T> implementedBy(Class<T> asType, Class<?> implClass)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    checkImplementingMethods(implClass.getMethods(), getAllMethodsToImplement(new Class<?>[]{asType}));
+    return asType;
+  }
+  /**
+   * To assert that all methods in <i>implClass</i> will properly
+   * implement some method in <i>asType</i>
+   * @return the <i>implClass</i>
+   * @throws InvalidReturnTypeException
+   * @throws UnusedMethodException
+   */
+  public static <ImplClass> Class<ImplClass> willImplement(Class<ImplClass> implClass, Class<?> asType)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    return willImplement(implClass, new Class<?>[]{asType});
+  }
+  /**
+   * To assert that all methods in <i>implClass</i> will properly
+   * implement some method in any one of <i>asTypes</i>
+   * @return the <i>implClass</i>
+   * @throws InvalidReturnTypeException
+   * @throws UnusedMethodException
+   */
+  public static <ImplClass> Class<ImplClass> willImplement(Class<ImplClass> implClass, Class<?>... asTypes)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    checkImplementingMethods(implClass.getMethods(), getAllMethodsToImplement(asTypes));
+    return implClass;
+  }
+  void checkImplementingMethods(Method[] implemented)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    final Class<?>[][] paramTypesArray = getParameterTypesArray(implemented);
+    for(MyMethod mm : mustUses) {
+      checkImplementingMethods(mm, implemented, paramTypesArray);
+    }
+  }
+  private static Method[] getAllMethodsToImplement(Class<?>[] asTypes) {
     ArrayList<Method> allmethods = new ArrayList<Method>();
     for(Class<?> asType : asTypes) {
       allmethods.addAll(Arrays.asList(asType.getMethods()));
     }
     allmethods.addAll(objectMethodsSignatures);
-    checkImplementingMethods((Method[]) allmethods.toArray(new Method[allmethods.size()]));
+    return (Method[]) allmethods.toArray(new Method[allmethods.size()]);
   }
-  void checkImplementingMethods(Method[] implemented)
-  throws InvalidReturnTypeException, UnusedMethodException {
+  private static Class<?>[][] getParameterTypesArray(Method[] implemented) {
     final Class<?>[][] paramTypesArray = new Class<?>[implemented.length][];
     for(int i=0; i<implemented.length; i++){
       paramTypesArray[i] = implemented[i].getParameterTypes();
     }
-    for(MyMethod mm : mustUses) {
-      checkImplementingMethods(mm, implemented, paramTypesArray);
-    }
+    return paramTypesArray;
   }
   private static void checkImplementingMethods(MyMethod implementing, Method[] implemented, Class<?>[][] parameterTypesArray)
   throws InvalidReturnTypeException, UnusedMethodException {
-    Class[] implementingParams = implementing.getParameterTypes();
-    Class returnType = implementing.getReturnType();
-    String name = implementing.getMethod().getName();
+    checkImplementingMethods(implementing.getMethod(), implementing.getParameterTypes(), 
+        implemented, parameterTypesArray);
+  }
+  private static void checkImplementingMethods(Method[] implementing, Method[] implemented)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    final Class<?>[][] paramTypesArray = getParameterTypesArray(implemented);
+    for(Method mtd : implementing) {
+      checkImplementingMethods(mtd, implemented, paramTypesArray);
+    }
+  }
+  private static void checkImplementingMethods(Method implementing, Method[] implemented, Class<?>[][] parameterTypesArray){
+    checkImplementingMethods(implementing, implementing.getParameterTypes(), 
+        implemented, parameterTypesArray);
+  }
+  private static void checkImplementingMethods(Method implementingMethod, Class[] implementingParams, Method[] implemented, Class<?>[][] parameterTypesArray) {
+    if(Object.class.equals(implementingMethod.getDeclaringClass())) return;
+    String name = implementingMethod.getName();
+    Class returnType = implementingMethod.getReturnType();
     for(int i=0; i<implemented.length; i++) {
       Method mtd = implemented[i];
       Class<?>[] implementedParams = parameterTypesArray[i];
       if(name.equals(mtd.getName()) && isParamsCompatible(implementingParams, implementedParams)){
         if(!isReturnTypeCompatible(returnType, mtd.getReturnType())) {
-          throw new InvalidReturnTypeException(mtd, implementing.getMethod());
+          throw new InvalidReturnTypeException(mtd, implementingMethod);
         }
         return;
       }
     }
-    throw new UnusedMethodException(implementing.getMethod());
+    throw new UnusedMethodException(implementingMethod);
   }
   static boolean isParamsCompatible(Class<?>[] with, Class<?>[] implemented){
     if(with.length!=implemented.length) return false;
@@ -574,7 +631,7 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public final Object override(Object obj, ImplClass overrider){
     Class overriden = obj.getClass();
-    final Class[] itfs = getAllInterfaces(overriden);
+    final Class<?>[] itfs = getAllInterfaces(overriden);
     checkImplementingMethods(itfs);
     return Proxy.newProxyInstance(overriden.getClassLoader(), itfs,
         createInvocationHandler(overrider, obj));

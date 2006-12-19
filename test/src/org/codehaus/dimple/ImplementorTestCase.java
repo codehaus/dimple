@@ -6,11 +6,11 @@ import java.sql.Connection;
 
 public class ImplementorTestCase extends AbstractTestCase {
   public void test_compareParameterTypes(){
-    assertEquals(-1, Implementor.compareParameterTypes(new Class[1], 0, new Class[0], 0));
-    assertEquals(1, Implementor.compareParameterTypes(new Class[0], 0, new Class[1], 0));
-    assertEquals(0, Implementor.compareParameterTypes(new Class[1], 0, new Class[1], 0));
-    assertEquals(-1, Implementor.compareParameterTypes(new Class[1], 1, new Class[1], 0));
-    assertEquals(1, Implementor.compareParameterTypes(new Class[1], 1, new Class[1], 2));
+    assertEquals(-1, TypingUtils.compareParameterTypes(new Class[1], 0, new Class[0], 0));
+    assertEquals(1, TypingUtils.compareParameterTypes(new Class[0], 0, new Class[1], 0));
+    assertEquals(0, TypingUtils.compareParameterTypes(new Class[1], 0, new Class[1], 0));
+    assertEquals(-1, TypingUtils.compareParameterTypes(new Class[1], 1, new Class[1], 0));
+    assertEquals(1, TypingUtils.compareParameterTypes(new Class[1], 1, new Class[1], 2));
   }
   public void test_compareMethodParameterTypes(){
     assertComparison(0, new Class[]{int.class, String.class}, new Class[]{int.class, String.class});
@@ -84,8 +84,8 @@ public class ImplementorTestCase extends AbstractTestCase {
     }
   }
   public void testImplementorSupportsContravariantParameters(){
-    Implementor impl1 = new Implementor(Test1.class);
-    TestInterface test1 = (TestInterface)impl1.implement(TestInterface.class, new Test1());
+    Implementor impl1 = new Implementor(Implementor.willImplement(Test1.class, TestInterface.class));
+    TestInterface test1 = (TestInterface)impl1.implement(Implementor.implementedBy(TestInterface.class, Test1.class), new Test1());
     test1.close();
     test1.setAge(10);
     assertEquals(10, test1.getAge());
@@ -199,7 +199,7 @@ public class ImplementorTestCase extends AbstractTestCase {
   };
   abstract class B extends A implements I3{}
   public void test_getAllInterfaces(){
-    assertEquals(3, Implementor.getAllInterfaces(B.class).length);
+    assertEquals(3, TypingUtils.getAllInterfaces(B.class).length);
   }
   public void testOverride(){
     Object orig = new B(){
@@ -210,7 +210,7 @@ public class ImplementorTestCase extends AbstractTestCase {
         return "f'";
       }
     });
-    Class[] itfs = Implementor.getAllInterfaces(orig.getClass());
+    Class[] itfs = TypingUtils.getAllInterfaces(orig.getClass());
     assertEquals(3, itfs.length);
     I1 i1 = (I1)proxy;
     assertEquals("f'", i1.f());
@@ -219,6 +219,41 @@ public class ImplementorTestCase extends AbstractTestCase {
     I3 i3 = (I3)proxy;
     assertEquals("h", i3.h());
   }
+  public class ImplWithExtraMethod {
+    public String f(){
+      return "my6";
+    }
+    public String extra(){return null;}
+  }
+  public void testImplementedByWillThrowExceptionForExtraMethod(){
+    try{
+      Class ret = Implementor.implementedBy(I1.class, ImplWithExtraMethod.class);
+      fail("should have failed");
+    }
+    catch(UnusedMethodException e){}
+    try{
+      Class ret = Implementor.willImplement(ImplWithExtraMethod.class, I1.class);
+      fail("should have failed");
+    }
+    catch(UnusedMethodException e){}
+  }
+  public class ImplWithBadReturnType {
+    public int f(){return 1;}
+  }
+
+  public void testImplementedByWillThrowExceptionForInvalidReturnType(){
+    try{
+      Implementor.implementedBy(I1.class, ImplWithBadReturnType.class);
+      fail("should have failed");
+    }
+    catch(InvalidReturnTypeException e){}
+    try{
+      Implementor.willImplement(ImplWithBadReturnType.class, I1.class);
+      fail("should have failed");
+    }
+    catch(InvalidReturnTypeException e){}
+  }
+
   private void assertTest2(TestInterface test2) {
     test2.close();
     test2.setAge(10);
@@ -229,7 +264,7 @@ public class ImplementorTestCase extends AbstractTestCase {
     assertEquals(expectedResult, compareTypes(types1, types2));
   }
   private static int compareTypes(Class[] types1, Class[] types2){
-    return Implementor.compareParameterTypes(types1, Implementor.getHierarchyDepthSum(types1), 
-        types2, Implementor.getHierarchyDepthSum(types2));
+    return TypingUtils.compareParameterTypes(types1, TypingUtils.getHierarchyDepthSum(types1), 
+        types2, TypingUtils.getHierarchyDepthSum(types2));
   }
 }

@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -220,6 +219,11 @@ public class Implementor implements Serializable {
   }
   private final Class implClass;
   private final Map methods = new HashMap();
+  private static final Comparator SUB_PARAM_TYPES_FIRST = new Comparator(){
+    public int compare(Object arg0, Object arg1) {
+      return compareMyMethod((MyMethod)arg0, (MyMethod)arg1);
+    }
+  };
   private final class ImplInvocationHandler implements InvocationHandler, Serializable, Ref {
     private static final long serialVersionUID = 7723292911817172565L;
     private final Object instance;
@@ -264,21 +268,20 @@ public class Implementor implements Serializable {
         throw new UnsupportedOperationException();
       }
     }
-
     private Object myCall(Object proxy, final Method mtd, Object[] args) throws IllegalAccessException, Throwable {
       if(isEqualsMethodCall(mtd, args)){
         if(Object.class.equals(mtd.getDeclaringClass())){
           //the native equals() call.
-          return Boolean.valueOf(proxy==args[0]);
+          return valueOf(proxy==args[0]);
         }
-        return Boolean.valueOf(instance.equals(unwrap(args[0])));
+        return valueOf(instance.equals(unwrap(args[0])));
       }
       return invokeMethod(instance, mtd, args);
     }
     
     private Object forwardCall(Object proxy, Object obj, final Method mtd, Object[] args) throws IllegalAccessException, Throwable {
       if(isEqualsMethodCall(mtd, args)){
-        return Boolean.valueOf(obj.equals(unwrap(args[0])));
+        return valueOf(obj.equals(unwrap(args[0])));
       }
       return invokeMethod(obj, mtd, args);
     }
@@ -308,7 +311,7 @@ public class Implementor implements Serializable {
     return obj;
   }
 
-  private static final class MyMethod implements Serializable {
+  static final class MyMethod implements Serializable {
     private static final long serialVersionUID = 8758558523031285785L;
     private transient Method method;
     private transient Class[] parameterTypes;
@@ -325,7 +328,7 @@ public class Implementor implements Serializable {
     MyMethod(Method mtd) {
       this.method = mtd;
       this.parameterTypes = mtd.getParameterTypes();
-      this.depth = getHierarchyDepthSum(parameterTypes);
+      this.depth = TypingUtils.getHierarchyDepthSum(parameterTypes);
     }
     public Method getMethod() {
       return method;
@@ -378,25 +381,9 @@ public class Implementor implements Serializable {
       sortMethods(suite);
     }
   }
-  private static final Comparator SUB_PARAM_TYPES_FIRST = new Comparator(){
-    public int compare(Object arg0, Object arg1) {
-      return compareMyMethod((MyMethod)arg0, (MyMethod)arg1);
-    }
-  };
-  private static int compareMyMethod(MyMethod m1, MyMethod m2){
-    return compareParameterTypes(m1.getParameterTypes(), m1.getDepth(), 
+  static int compareMyMethod(MyMethod m1, MyMethod m2){
+    return TypingUtils.compareParameterTypes(m1.getParameterTypes(), m1.getDepth(), 
         m2.getParameterTypes(), m2.getDepth());
-  }
-  static int compareParameterTypes(final Class[] params1, long depth1, 
-      final Class[] params2, long depth2) {
-    if(params1.length > params2.length) return -1;
-    if(params1.length < params2.length) return 1;
-    if(depth1 > depth2) return -1;
-    if(depth1 < depth2) return 1;
-    return 0;
-  }
-  private static void sortMethods(List suite){
-    Collections.sort(suite, SUB_PARAM_TYPES_FIRST);
   }
   /**
    * To find a method in the impl class that can be used in place of the <i>implemented</i> method.
@@ -412,7 +399,7 @@ public class Implementor implements Serializable {
     for(int i=0; i<size; i++){
       final MyMethod mm = (MyMethod)suite.get(i);
       final Class[] withParamTypes = mm.getParameterTypes();
-      if(isParamsCompatible(withParamTypes, implementedParamTypes)){
+      if(TypingUtils.isParamsCompatible(withParamTypes, implementedParamTypes)){
         return mm.getMethod();
       }
     }
@@ -433,46 +420,41 @@ public class Implementor implements Serializable {
       return CglibUtils.proxy(loader, asType, handler);
     }
   }
-  static boolean isParamsCompatible(Class[] with, Class[] implemented){
-    if(with.length!=implemented.length) return false;
-    for (int i = 0; i < implemented.length; i++) {
-      if(!with[i].isAssignableFrom(implemented[i])) return false;
-    }
-    return true;
+  /**
+   * To assert that all methods in <i>implClass</i> will properly
+   * implement some method in <i>asType</i>
+   * @return the <i>asType</i>
+   * @throws InvalidReturnTypeException
+   * @throws UnusedMethodException
+   */
+  public static Class implementedBy(Class asType, Class implClass)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    TypingUtils.checkImplementingMethods(implClass.getMethods(), TypingUtils.getAllMethodsToImplement(new Class[]{asType}));
+    return asType;
   }
-  /*
-  private static boolean isReturnTypeCompatible(Class with, Class implemented){
-    if(void.class.equals(implemented)){
-      return true;
-    }
-    return implemented.isAssignableFrom(with);
-  }*/
-  static long getHierarchyDepthSum(Class[] classes){
-    long sum = 0;
-    for (int i = 0; i < classes.length; i++) {
-      sum += getHierarchyDepth(classes[i]);
-    }
-    return sum;
+  /**
+   * To assert that all methods in <i>implClass</i> will properly
+   * implement some method in <i>asType</i>
+   * @return the <i>implClass</i>
+   * @throws InvalidReturnTypeException
+   * @throws UnusedMethodException
+   */
+  public static Class willImplement(Class implClass, Class asType)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    return willImplement(implClass, new Class[]{asType});
   }
-  static int getHierarchyDepth(Class c){
-    int depth = 0;
-    if(c==null || Object.class.equals(c)){
-      return depth;
-    }
-    int superDepth = 1+getHierarchyDepth(c.getSuperclass());
-    if(superDepth>depth){
-      depth = superDepth;
-    }
-    final Class[] itfs = c.getInterfaces();
-    for(int i=0; i<itfs.length; i++){
-      int itfDepth = 1+getHierarchyDepth(itfs[i]);
-      if(itfDepth>depth){
-        depth = itfDepth;
-      }
-    }
-    return depth;
+  /**
+   * To assert that all methods in <i>implClass</i> will properly
+   * implement some method in any one of <i>asTypes</i>
+   * @return the <i>implClass</i>
+   * @throws InvalidReturnTypeException
+   * @throws UnusedMethodException
+   */
+  public static Class willImplement(Class implClass, Class[] asTypes)
+  throws InvalidReturnTypeException, UnusedMethodException {
+    TypingUtils.checkImplementingMethods(implClass.getMethods(), TypingUtils.getAllMethodsToImplement(asTypes));
+    return implClass;
   }
-
   /**
    * Overrides an object using methods defined in impl class and the overrider object
    * bound to "this".
@@ -483,10 +465,13 @@ public class Implementor implements Serializable {
    */
   public final Object override(Object obj, Object overrider){
     Class overriden = obj.getClass();
-    return Proxy.newProxyInstance(overriden.getClassLoader(), getAllInterfaces(overriden),
+    return Proxy.newProxyInstance(overriden.getClassLoader(), TypingUtils.getAllInterfaces(overriden),
         createInvocationHandler(overrider, obj));
   }
 
+  private static void sortMethods(List suite){
+    Collections.sort(suite, SUB_PARAM_TYPES_FIRST);
+  }
   /**
    * Overrides an object using the overrider object.
    * All interfaces of <i>obj</i> are implemented by the proxy.
@@ -497,17 +482,8 @@ public class Implementor implements Serializable {
   public static final Object overrideObject(Object obj, Object overrider){
     return new Implementor(overrider.getClass()).override(obj, overrider);
   }
-  /**
-   * To get all interfaces implemented by a class.
-   * @param cls the class.
-   * @return the interfaces.
-   */
-  static Class[] getAllInterfaces(Class cls) {
-    final HashSet ret = new HashSet();
-    for(;cls!=null && !Object.class.equals(cls); cls=cls.getSuperclass()){
-      ret.addAll(Arrays.asList(cls.getInterfaces()));
-    }
-    return (Class[]) ret.toArray(new Class[ret.size()]);
-  }
   private static final long serialVersionUID = -5648266362433165290L;
+  private static Boolean valueOf(boolean val){
+    return val?Boolean.TRUE:Boolean.FALSE;
+  }
 }

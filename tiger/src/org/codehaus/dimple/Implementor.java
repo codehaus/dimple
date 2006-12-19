@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 /**
@@ -341,7 +340,7 @@ public class Implementor<ImplClass> implements Serializable {
     MyMethod(Method mtd) {
       this.method = mtd;
       this.parameterTypes = mtd.getParameterTypes();
-      this.depth = getHierarchyDepthSum(parameterTypes);
+      this.depth = TypingUtils.getHierarchyDepthSum(parameterTypes);
     }
     public Method getMethod() {
       return method;
@@ -414,16 +413,8 @@ public class Implementor<ImplClass> implements Serializable {
     }
   };
   private static int compareMyMethod(MyMethod m1, MyMethod m2){
-    return compareParameterTypes(m1.getParameterTypes(), m1.getDepth(), 
+    return TypingUtils.compareParameterTypes(m1.getParameterTypes(), m1.getDepth(), 
         m2.getParameterTypes(), m2.getDepth());
-  }
-  static int compareParameterTypes(final Class<?>[] params1, long depth1, 
-      final Class<?>[] params2, long depth2) {
-    if(params1.length > params2.length) return -1;
-    if(params1.length < params2.length) return 1;
-    if(depth1 > depth2) return -1;
-    if(depth1 < depth2) return 1;
-    return 0;
   }
   private static void sortMethods(List<MyMethod> suite){
     Collections.sort(suite, SUB_PARAM_TYPES_FIRST);
@@ -442,7 +433,7 @@ public class Implementor<ImplClass> implements Serializable {
     for(int i=0; i<size; i++){
       final MyMethod mm = suite.get(i);
       final Class[] withParamTypes = mm.getParameterTypes();
-      if(isParamsCompatible(withParamTypes, implementedParamTypes)){
+      if(TypingUtils.isParamsCompatible(withParamTypes, implementedParamTypes)){
         return mm.getMethod();
       }
     }
@@ -464,13 +455,6 @@ public class Implementor<ImplClass> implements Serializable {
       return (T)CglibUtils.proxy(loader, asType, handler);
     }
   }
-  private interface ObjectMethods {
-    boolean equals(Object obj);
-    int hashCode();
-    String toString();
-  }
-  private static final List<Method> objectMethodsSignatures = 
-    Arrays.asList(ObjectMethods.class.getMethods());
   /**
    * Makes sure that methods defined by ImplClass implement some method
    * in <i>asType</i>.
@@ -491,7 +475,7 @@ public class Implementor<ImplClass> implements Serializable {
   public void checkImplementingMethods(Class<?>... asTypes)
   throws InvalidReturnTypeException, UnusedMethodException {
     if(mustUses.isEmpty()) return;
-    checkImplementingMethods(getAllMethodsToImplement(asTypes));
+    checkImplementingMethods(TypingUtils.getAllMethodsToImplement(asTypes));
   }
   /**
    * To assert that all methods in <i>implClass</i> will properly
@@ -502,7 +486,7 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public static <T> Class<T> implementedBy(Class<T> asType, Class<?> implClass)
   throws InvalidReturnTypeException, UnusedMethodException {
-    checkImplementingMethods(implClass.getMethods(), getAllMethodsToImplement(new Class<?>[]{asType}));
+    TypingUtils.checkImplementingMethods(implClass.getMethods(), TypingUtils.getAllMethodsToImplement(new Class<?>[]{asType}));
     return asType;
   }
   /**
@@ -525,102 +509,21 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public static <ImplClass> Class<ImplClass> willImplement(Class<ImplClass> implClass, Class<?>... asTypes)
   throws InvalidReturnTypeException, UnusedMethodException {
-    checkImplementingMethods(implClass.getMethods(), getAllMethodsToImplement(asTypes));
+    TypingUtils.checkImplementingMethods(implClass.getMethods(), TypingUtils.getAllMethodsToImplement(asTypes));
     return implClass;
   }
   void checkImplementingMethods(Method[] implemented)
   throws InvalidReturnTypeException, UnusedMethodException {
-    final Class<?>[][] paramTypesArray = getParameterTypesArray(implemented);
+    final Class<?>[][] paramTypesArray = TypingUtils.getParameterTypesArray(implemented);
     for(MyMethod mm : mustUses) {
       checkImplementingMethods(mm, implemented, paramTypesArray);
     }
   }
-  private static Method[] getAllMethodsToImplement(Class<?>[] asTypes) {
-    ArrayList<Method> allmethods = new ArrayList<Method>();
-    for(Class<?> asType : asTypes) {
-      allmethods.addAll(Arrays.asList(asType.getMethods()));
-    }
-    allmethods.addAll(objectMethodsSignatures);
-    return (Method[]) allmethods.toArray(new Method[allmethods.size()]);
-  }
-  private static Class<?>[][] getParameterTypesArray(Method[] implemented) {
-    final Class<?>[][] paramTypesArray = new Class<?>[implemented.length][];
-    for(int i=0; i<implemented.length; i++){
-      paramTypesArray[i] = implemented[i].getParameterTypes();
-    }
-    return paramTypesArray;
-  }
   private static void checkImplementingMethods(MyMethod implementing, Method[] implemented, Class<?>[][] parameterTypesArray)
   throws InvalidReturnTypeException, UnusedMethodException {
-    checkImplementingMethods(implementing.getMethod(), implementing.getParameterTypes(), 
+    TypingUtils.checkImplementingMethods(implementing.getMethod(), implementing.getParameterTypes(), 
         implemented, parameterTypesArray);
   }
-  private static void checkImplementingMethods(Method[] implementing, Method[] implemented)
-  throws InvalidReturnTypeException, UnusedMethodException {
-    final Class<?>[][] paramTypesArray = getParameterTypesArray(implemented);
-    for(Method mtd : implementing) {
-      checkImplementingMethods(mtd, implemented, paramTypesArray);
-    }
-  }
-  private static void checkImplementingMethods(Method implementing, Method[] implemented, Class<?>[][] parameterTypesArray){
-    checkImplementingMethods(implementing, implementing.getParameterTypes(), 
-        implemented, parameterTypesArray);
-  }
-  private static void checkImplementingMethods(Method implementingMethod, Class[] implementingParams, Method[] implemented, Class<?>[][] parameterTypesArray) {
-    if(Object.class.equals(implementingMethod.getDeclaringClass())) return;
-    String name = implementingMethod.getName();
-    Class returnType = implementingMethod.getReturnType();
-    for(int i=0; i<implemented.length; i++) {
-      Method mtd = implemented[i];
-      Class<?>[] implementedParams = parameterTypesArray[i];
-      if(name.equals(mtd.getName()) && isParamsCompatible(implementingParams, implementedParams)){
-        if(!isReturnTypeCompatible(returnType, mtd.getReturnType())) {
-          throw new InvalidReturnTypeException(mtd, implementingMethod);
-        }
-        return;
-      }
-    }
-    throw new UnusedMethodException(implementingMethod);
-  }
-  static boolean isParamsCompatible(Class<?>[] with, Class<?>[] implemented){
-    if(with.length!=implemented.length) return false;
-    for (int i = 0; i < implemented.length; i++) {
-      if(!with[i].isAssignableFrom(implemented[i])) return false;
-    }
-    return true;
-  }
-  static boolean isReturnTypeCompatible(Class<?> with, Class<?> implemented){
-    if(void.class.equals(implemented)){
-      return true;
-    }
-    return implemented.isAssignableFrom(with);
-  }
-  static long getHierarchyDepthSum(Class[] classes){
-    long sum = 0;
-    for (int i = 0; i < classes.length; i++) {
-      sum += getHierarchyDepth(classes[i]);
-    }
-    return sum;
-  }
-  static int getHierarchyDepth(Class c){
-    int depth = 0;
-    if(c==null || Object.class.equals(c)){
-      return depth;
-    }
-    int superDepth = 1+getHierarchyDepth(c.getSuperclass());
-    if(superDepth>depth){
-      depth = superDepth;
-    }
-    final Class[] itfs = c.getInterfaces();
-    for(Class itf : itfs){
-      int itfDepth = 1+getHierarchyDepth(itf);
-      if(itfDepth>depth){
-        depth = itfDepth;
-      }
-    }
-    return depth;
-  }
-
   /**
    * Overrides an object using methods defined in impl class and the overrider object
    * bound to "this".
@@ -631,7 +534,7 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public final Object override(Object obj, ImplClass overrider){
     Class overriden = obj.getClass();
-    final Class<?>[] itfs = getAllInterfaces(overriden);
+    final Class<?>[] itfs = TypingUtils.getAllInterfaces(overriden);
     checkImplementingMethods(itfs);
     return Proxy.newProxyInstance(overriden.getClassLoader(), itfs,
         createInvocationHandler(overrider, obj));
@@ -646,18 +549,6 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public static <ImplClass> Object overrideObject(Object obj, ImplClass overrider){
     return getInstanceForImplObject(overrider).override(obj, overrider);
-  }
-  /**
-   * To get all interfaces implemented by a class.
-   * @param cls the class.
-   * @return the interfaces.
-   */
-  static Class<?>[] getAllInterfaces(Class<?> cls) {
-    final HashSet<Class> ret = new HashSet<Class>();
-    for(;cls!=null && !Object.class.equals(cls); cls=cls.getSuperclass()){
-      ret.addAll(Arrays.asList(cls.getInterfaces()));
-    }
-    return (Class<?>[]) ret.toArray(new Class<?>[ret.size()]);
   }
   private static final long serialVersionUID = -5648266362433165290L;
 }

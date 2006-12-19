@@ -6,11 +6,11 @@ import java.sql.Connection;
 
 public class ImplementorTestCase extends AbstractTestCase {
   public void test_compareParameterTypes(){
-    assertEquals(-1, Implementor.compareParameterTypes(new Class[1], 0, new Class[0], 0));
-    assertEquals(1, Implementor.compareParameterTypes(new Class[0], 0, new Class[1], 0));
-    assertEquals(0, Implementor.compareParameterTypes(new Class[1], 0, new Class[1], 0));
-    assertEquals(-1, Implementor.compareParameterTypes(new Class[1], 1, new Class[1], 0));
-    assertEquals(1, Implementor.compareParameterTypes(new Class[1], 1, new Class[1], 2));
+    assertEquals(-1, TypingUtils.compareParameterTypes(new Class[1], 0, new Class[0], 0));
+    assertEquals(1, TypingUtils.compareParameterTypes(new Class[0], 0, new Class[1], 0));
+    assertEquals(0, TypingUtils.compareParameterTypes(new Class[1], 0, new Class[1], 0));
+    assertEquals(-1, TypingUtils.compareParameterTypes(new Class[1], 1, new Class[1], 0));
+    assertEquals(1, TypingUtils.compareParameterTypes(new Class[1], 1, new Class[1], 2));
   }
   public void test_compareMethodParameterTypes(){
     assertComparison(0, new Class[]{int.class, String.class}, new Class[]{int.class, String.class});
@@ -203,7 +203,7 @@ public class ImplementorTestCase extends AbstractTestCase {
   };
   abstract class B extends A implements I3{}
   public void test_getAllInterfaces(){
-    assertEquals(3, Implementor.getAllInterfaces(B.class).length);
+    assertEquals(3, TypingUtils.getAllInterfaces(B.class).length);
   }
   public void testOverride(){
     Object orig = new B(){
@@ -215,7 +215,7 @@ public class ImplementorTestCase extends AbstractTestCase {
         return "f'";
       }
     });
-    Class[] itfs = Implementor.getAllInterfaces(orig.getClass());
+    Class[] itfs = TypingUtils.getAllInterfaces(orig.getClass());
     assertEquals(3, itfs.length);
     I1 i1 = (I1)proxy;
     assertEquals("f'", i1.f());
@@ -270,7 +270,7 @@ public class ImplementorTestCase extends AbstractTestCase {
     assertEquals(expectedResult, compareTypes(types1, types2));
   }
   private static int compareTypes(Class[] types1, Class[] types2){
-    return Implementor.compareParameterTypes(types1, Implementor.getHierarchyDepthSum(types1), 
-        types2, Implementor.getHierarchyDepthSum(types2));
+    return TypingUtils.compareParameterTypes(types1, TypingUtils.getHierarchyDepthSum(types1), 
+        types2, TypingUtils.getHierarchyDepthSum(types2));
   }
 }

@@ -508,7 +508,7 @@ public class Implementor<ImplClass> implements Serializable {
       checkImplementingMethods(mm, implemented, paramTypesArray);
     }
   }
-  private void checkImplementingMethods(MyMethod implementing, Method[] implemented, Class<?>[][] parameterTypesArray)
+  private static void checkImplementingMethods(MyMethod implementing, Method[] implemented, Class<?>[][] parameterTypesArray)
   throws InvalidReturnTypeException, UnusedMethodException {
     Class[] implementingParams = implementing.getParameterTypes();
     Class returnType = implementing.getReturnType();

@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 import junit.framework.TestCase;
 
-abstract class AbstractTestCase extends TestCase {
+public abstract class AbstractTestCase extends TestCase {
   @SuppressWarnings("unchecked")
   public static <T> T assertSerializable(T obj) throws IOException, ClassNotFoundException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -25,5 +25,6 @@ abstract class AbstractTestCase extends TestCase {
     Object val = "value";
     hm.put(obj, val);
     assertSame(val, hm.get(obj));
+    assertEquals(obj, obj);
   }
 }

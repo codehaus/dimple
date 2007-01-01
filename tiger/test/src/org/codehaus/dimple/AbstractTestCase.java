@@ -1,23 +1,16 @@
 package org.codehaus.dimple;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashMap;
+
+import org.codehaus.dimple.testutils.CloneUtils;
 
 import junit.framework.TestCase;
 
 public abstract class AbstractTestCase extends TestCase {
   @SuppressWarnings("unchecked")
   public static <T> T assertSerializable(T obj) throws IOException, ClassNotFoundException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(baos);
-    oos.writeObject(obj);
-    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-    ObjectInputStream ois = new ObjectInputStream(bais);
-    return (T)ois.readObject();
+    return (T)CloneUtils.cloneSerializable(obj);
   }
   @SuppressWarnings("unchecked")
   public static void assertHashable(Object obj){

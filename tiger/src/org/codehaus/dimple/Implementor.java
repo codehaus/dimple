@@ -103,7 +103,7 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public <T> T implement(Class<T> asType, ImplClass with, T defaultDelegate) {
     checkImplementingMethods(asType);
-    return newProxyInstance(with.getClass().getClassLoader(), asType, 
+    return newProxyInstance(asType.getClassLoader(), asType, 
         createInvocationHandler(with, defaultDelegate));
   }
   /**
@@ -118,7 +118,7 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public <T> T implementWithDefaultHandler(Class<T> asType, ImplClass with, InvocationHandler defaultHandler) {
     checkImplementingMethods(asType);
-    return newProxyInstance(with.getClass().getClassLoader(), asType, 
+    return newProxyInstance(asType.getClassLoader(), asType, 
         createInvocationHandlerWithDefaultHandler(with, defaultHandler));
   }
   /**
@@ -132,7 +132,7 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public <T> T implement(Class<T> asType, ImplClass with){
     checkImplementingMethods(asType);
-    return newProxyInstance(with.getClass().getClassLoader(), asType, 
+    return newProxyInstance(asType.getClassLoader(), asType, 
         createInvocationHandler(with));
   }
   /**

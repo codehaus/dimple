@@ -47,6 +47,9 @@ public class ImplementorTestCase extends AbstractTestCase {
     catch(UnsupportedOperationException e){}
     assertSame(TEST, conn.toString());
   }
+  public void testProxyClassLoaded(){
+    Implementor.proxy(TestInterface.class, new Object());
+  }
   private interface TestInterface {
     void close();
     int getAge();

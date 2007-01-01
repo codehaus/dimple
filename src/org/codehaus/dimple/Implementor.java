@@ -99,7 +99,7 @@ public class Implementor implements Serializable {
    * @return the dynamic proxy that implements <i>asType</i>.
    */
   public Object implement(Class asType, Object with, Object defaultDelegate) {
-    return newProxyInstance(with.getClass().getClassLoader(), asType, 
+    return newProxyInstance(asType.getClassLoader(), asType, 
         createInvocationHandler(with, defaultDelegate));
   }
   /**
@@ -113,7 +113,7 @@ public class Implementor implements Serializable {
    * @return the dynamic proxy that implements <i>asType</i>.
    */
   public Object implementWithDefaultHandler(Class asType, Object with, InvocationHandler defaultHandler) {
-    return newProxyInstance(with.getClass().getClassLoader(), asType, 
+    return newProxyInstance(asType.getClassLoader(), asType, 
         createInvocationHandlerWithDefaultHandler(with, defaultHandler));
   }
   /**
@@ -126,7 +126,7 @@ public class Implementor implements Serializable {
    * @return the dynamic proxy that implements <i>asType</i>.
    */
   public Object implement(Class asType, Object with){
-    return newProxyInstance(with.getClass().getClassLoader(), asType, 
+    return newProxyInstance(asType.getClassLoader(), asType, 
         createInvocationHandler(with));
   }
   /**

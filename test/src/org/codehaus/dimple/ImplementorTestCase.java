@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 
+
 public class ImplementorTestCase extends AbstractTestCase {
   public void test_compareParameterTypes(){
     assertEquals(-1, TypingUtils.compareParameterTypes(new Class[1], 0, new Class[0], 0));
@@ -45,6 +46,9 @@ public class ImplementorTestCase extends AbstractTestCase {
     }
     catch(UnsupportedOperationException e){}
     assertSame(TEST, conn.toString());
+  }
+  public void testProxyClassLoaded(){
+    Implementor.proxy(TestInterface.class, new Object());
   }
   private interface TestInterface {
     void close();

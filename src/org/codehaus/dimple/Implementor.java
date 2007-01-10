@@ -70,10 +70,6 @@ public class Implementor implements Serializable {
    * and then use it repeatedly.
    */
   public static Object proxy(Class asType, Object with, Object defaultDelegate){
-    if(!asType.isInstance(defaultDelegate)){
-      throw new IllegalArgumentException("default delegate of type "+asType.getName() + " expected, "
-          + ((defaultDelegate==null)?null:defaultDelegate.getClass().getName())+" encountered");
-    }
     return new Implementor(with.getClass()).implement(asType, with, defaultDelegate);
   }
   

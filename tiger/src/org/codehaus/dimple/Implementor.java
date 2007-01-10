@@ -294,7 +294,7 @@ public class Implementor<ImplClass> implements Serializable {
       return invokeMethod(obj, mtd, args);
     }
   }
-  static final String EQUALS = "equals";
+  private static final String EQUALS = "equals";
   static boolean isEqualsMethodCall(final Method mtd, Object[] args) {
     return args!=null && args.length==1 && EQUALS.equals(mtd.getName())
         && Object.class.equals(mtd.getParameterTypes()[0]);
@@ -543,7 +543,7 @@ public class Implementor<ImplClass> implements Serializable {
    * @param overrider the overrider.
    * @return the proxy object.
    */
-  public static <ImplClass> Object overrideObject(Object obj, ImplClass overrider){
+  public static Object overrideObject(Object obj, Object overrider){
     return getInstanceForImplObject(overrider).override(obj, overrider);
   }
   private static final long serialVersionUID = -5648266362433165290L;

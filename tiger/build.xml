@@ -8,6 +8,7 @@
 
   <!-- directories -->
   <property name="src.dir" value="src" />
+  <property name="internal.src.dir" value="internals" />
   <property name="build.dir" value="build" />
   <property name="lib.dir" value="lib" />
   <property name="test.dir" value="test" />
@@ -21,6 +22,7 @@
     <pathelement path="${java.class.path}"/>
     <pathelement location="${build.dir}"/>
     <pathelement location="${src.dir}"/>
+    <pathelement location="${internal.src.dir}"/>
   	<fileset dir="${lib.dir}">
   		<include name="**/*.jar"/>
   	</fileset>
@@ -42,12 +44,16 @@
   	<fileset dir="${lib.dir}">
   		<include name="**/*.jar"/>
   		<exclude name="cglib*.jar"/>
+  		<exclude name="asm*.jar"/>
   	</fileset>
 	</path>
 
   <!-- build task -->
   <target name="build" depends="build_dir">
-		<javac srcdir="${src.dir}" destdir="${build.dir}" deprecation="on" debug="on" classpathref="main.compile.classpath"/>
+		<javac destdir="${build.dir}" deprecation="on" debug="on" classpathref="main.compile.classpath">
+			<src location="${src.dir}"/>
+			<src location="${internal.src.dir}"/>
+	  </javac>
 		<echo message="message : all java source file compiled successful."/>
   </target>
 
@@ -103,10 +109,11 @@
     <mkdir dir="${test.build.dir}"/>
   </target>
   <target name="doc">
-        <javadoc destdir="docs/api" access="protected" use="true" notree="false"
+        <javadoc destdir="docs/api" use="true" notree="false"
         	nonavbar="false" noindex="false" splitindex="true" author="true"
         	version="true" nodeprecatedlist="false" nodeprecated="false"
         	packagenames="${doc.packages}"
+        	
         	classpathref="main.compile.classpath"
         	sourcepath="src" doctitle="${project.fullname} Documentation"/>
   </target>
@@ -122,7 +129,7 @@
   <target name="dist" depends="distbin">
   	<zip destfile="dist/${project.name}-${project.version}.zip"
  		 includes="build.xml, README.txt, *.properties,
-  		src/**/*.*, test/src/**/*.*, dist/*.jar"
+  		src/**/*.*, internals/**/*.*, test/src/**/*.*, dist/*.jar"
   	  basedir="."/>
   </target>
   

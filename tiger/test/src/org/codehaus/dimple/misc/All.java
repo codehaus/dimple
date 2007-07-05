@@ -4,9 +4,9 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import org.codehaus.dimple.Implementor;
@@ -18,20 +18,17 @@ import org.codehaus.dimple.Implementor;
  * @author yub
  *
  */
-public class All implements InvocationHandler, Serializable {
+public class All extends AbstractInterceptor
+implements InvocationHandler, Serializable {
   private static final long serialVersionUID = 3992411460899603473L;
   private final List participants;
-  private final Class targetType;
-  private final Implementor implementor;
+  //private final Class targetType;
+  //private final Implementor implementor;
   public static <T> T sumOf(Class<T> targetType, Object[] arr) {
     return sumOf(targetType, Arrays.asList(arr), arr.getClass().getComponentType());
   }
-  @SuppressWarnings("unchecked")
   public static <T> T sumOf(Class<T> targetType, List<?> participants, Class<?> componentType) {
-    return (T)Proxy.newProxyInstance(targetType.getClassLoader(), 
-        new Class<?>[]{targetType}, new All(participants, targetType, 
-            determineImplementor(targetType, componentType))
-    );
+    return new All(participants).as(targetType);
   }
   private static Implementor<?> determineImplementor(
       Class<?> targetType, Class<?> componentType) {
@@ -41,44 +38,62 @@ public class All implements InvocationHandler, Serializable {
   public static <T> T sumOf(Class<T> targetType, List<?> participants) {
     return sumOf(targetType, participants, null);
   }
-  private Implementor getImplementorFor(Object obj) {
-    if(implementor==null){
-      return ImplementorPool.getInstance(obj.getClass());
-    }
-    else return implementor;
+
+  @Override
+  protected Object getForward() {
+    return participants;
   }
   @SuppressWarnings("unchecked")
-  private Object convert(Object from){
-    return getImplementorFor(from).implement(targetType, from);
+  private static <T> T convert(Class<T> targetType, Object from){
+    if(from==null || targetType.isInstance(from)) return (T)from;
+    Implementor implementor = ImplementorPool.getInstance(from.getClass());
+    return (T) implementor.implement(targetType, from);
   }
-  private All(List participants, Class targetType, Implementor implementor) {
+  private All(List participants) {
     this.participants = participants;
-    this.targetType = targetType;
-    this.implementor = implementor;
   }
-  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+  private static Method forceAccess(Method mtd) {
+    if(Modifier.isPublic(mtd.getModifiers()) && Modifier.isPublic(mtd.getDeclaringClass().getModifiers()))
+      return mtd;
     try {
-      if(Object.class.equals(method.getDeclaringClass())) {
-        return method.invoke(this, args);
-      }
-      else {
-        double result = 0;
-        for(Iterator<?> it = participants.iterator(); it.hasNext();){
-          Object participant = it.next();
-          if(participant==null) continue;
-          if(!targetType.isInstance(participant)) {
-            participant = convert(participant);
-          }
-          Number val = (Number)method.invoke(participant, args);
-          if(val != null)
-            result += val.doubleValue();
-        }
-        return new Double(result);
-      }
+      mtd.setAccessible(true);
     }
-    catch(InvocationTargetException e) {
-      throw e.getTargetException();
+    catch(SecurityException e){}
+    return mtd;
+  }
+  @Override
+  protected Object onInvocation(Object proxy, final Method method, final Object[] args) throws Throwable {
+    if(method.getReturnType().isInterface()) {
+      return null;
+//      return new Thunk(){
+//        @Override
+//        protected List<?> evalParticipants() throws Throwable {
+//          final ArrayList<?> result = new ArrayList<?>(participants.size());
+//          for(Object participant: participants){
+//            if(participant==null) {
+//              result.add(participant);
+//            }
+//            else {
+//              result.add(method.invoke(participant, args));
+//            }
+//          }
+//          return result;
+//        }
+//      }.as(method.getReturnType());
     }
+    else {
+      return calculateSum(method, args);
+    }
+  }
+  private Object calculateSum(Method method, Object[] args) throws IllegalAccessException, InvocationTargetException {
+    double result = 0;
+    for(Object participant: participants){
+      if(participant==null) continue;
+      Number val = (Number)forceAccess(method).invoke(participant, args);
+      if(val != null)
+        result += val.doubleValue();
+    }
+    return new Double(result);
   }
   /**
    * if the object compared to is a dynamic proxy, unwrap it and get the InvocationHandler to compare with.

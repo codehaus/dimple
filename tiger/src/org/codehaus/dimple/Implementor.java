@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 /**
  * This class is used to create implementation of interface(s) dynamically.
  * <p>
@@ -212,6 +213,82 @@ public class Implementor<ImplClass> implements Serializable {
    */
   public Class<ImplClass> getImplClass(){
     return implClass;
+  }
+  private static WeakHashMap<Pair<Class, Class>, Interceptor> interceptorCache = 
+    new WeakHashMap<Pair<Class, Class>, Interceptor>();
+  /**
+   * Generate byte code to create an interceptor that will intercept objects
+   * of <code>interceptedType</code> with objects of <code>implClass</code>.
+   * <p>
+   * asm and cglib jar files have to be in classpath to use this method.
+   * @param <T> the type of object to be intercepted.
+   * @param interceptedType the intercepted type.
+   * @return the Interceptor instance.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> Interceptor<T, ImplClass> generateInterceptor(Class<T> interceptedType){
+    checkImplementingMethods(interceptedType);
+    Pair<Class,Class> key = new Pair<Class,Class>(interceptedType, this.implClass);
+    synchronized(interceptorCache) {
+      Interceptor<T, ImplClass> interceptor = interceptorCache.get(key);
+      if(interceptor!=null) return interceptor;
+      interceptor = InterceptorGenerator.generateInterceptor(interceptedType, implClass, new InterceptorGenerator.MethodMapping(){
+        public Method getOverrrider(Method method) {
+          return lookupImplementingMethod(method);
+        }
+      });
+      interceptorCache.put(key, interceptor);
+      return interceptor;
+    }
+  }
+  /**
+   * Generate byte code to create an interceptor that will intercept objects
+   * of <code>interceptedType</code> with objects of <code>Impl</code>.
+   * <p>
+   * asm and cglib jar files have to be in classpath to use this method.
+   * @param <T> the type of objects to be intercepted.
+   * @param <Impl> the type of objects used to intercept.
+   * @param interceptedType the intercepted type.
+   * @param implClass the type used to intercept.
+   * @return the interceptor.
+   */
+  public static <T, Impl> Interceptor<T, Impl> generateInterceptor(Class<T> interceptedType, Class<Impl> implClass) {
+    return instance(implClass).generateInterceptor(interceptedType);
+  }
+  /**
+   * Convenience method to intercept an instance of an interface.
+   * Equivalent to <pre>
+   * generateInterceptor(interceptedType, with.getClass()).intercept(intercepted, with);
+   * </pre>
+   * <p>
+   * asm and cglib jar files have to be in classpath to use this method.
+   * @param <T> the interface type to be intercepted.
+   * @param interceptedType the intercepted type.
+   * @param intercepted the object to be intercepted.
+   * @param with the object used to intercept.
+   * @return the intercepted instance.
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T intercept(Class<T> interceptedType, T intercepted, Object with) {
+    Interceptor interceptor = generateInterceptor(interceptedType, with.getClass());
+    return (T)interceptor.intercept(intercepted, with);
+  }
+  /**
+   * Convenience method to stub an interface.
+   * Equivalent to <pre>
+   * generateInterceptor(interceptedType, with.getClass()).stub(with);
+   * </pre>
+   * <p>
+   * asm and cglib jar files have to be in classpath to use this method.
+   * @param <T> the interface type to be stubbed.
+   * @param stubbedType the type to be stubbed.
+   * @param with the object used to stub.
+   * @return the stubbed instance.
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T stub(Class<T> stubbedType, Object with) {
+    Interceptor interceptor = generateInterceptor(stubbedType, with.getClass());
+    return (T)interceptor.stub(with);
   }
   void addClass(Class<?> cls) {
     final boolean force = !Modifier.isPublic(cls.getModifiers());

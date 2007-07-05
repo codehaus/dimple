@@ -14,6 +14,7 @@ public class CornerCaseTest extends TestCase {
       return "x";
     }
   }
+  @SuppressWarnings("unchecked")
   public void test1(){
     Base base = new Base(){
       public int getAge(){

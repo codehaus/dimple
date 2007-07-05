@@ -9,7 +9,6 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
 
-import org.codehaus.dimple.Implementor;
 
 /**
  * This class utilizes dimple to create dynamic proxy for summing up
@@ -30,11 +29,6 @@ implements InvocationHandler, Serializable {
   public static <T> T sumOf(Class<T> targetType, List<?> participants, Class<?> componentType) {
     return new All(participants).as(targetType);
   }
-  private static Implementor<?> determineImplementor(
-      Class<?> targetType, Class<?> componentType) {
-    return componentType==null||targetType.isAssignableFrom(componentType)?
-        null:ImplementorPool.getInstance(componentType);
-  }
   public static <T> T sumOf(Class<T> targetType, List<?> participants) {
     return sumOf(targetType, participants, null);
   }
@@ -42,12 +36,6 @@ implements InvocationHandler, Serializable {
   @Override
   protected Object getForward() {
     return participants;
-  }
-  @SuppressWarnings("unchecked")
-  private static <T> T convert(Class<T> targetType, Object from){
-    if(from==null || targetType.isInstance(from)) return (T)from;
-    Implementor implementor = ImplementorPool.getInstance(from.getClass());
-    return (T) implementor.implement(targetType, from);
   }
   private All(List participants) {
     this.participants = participants;

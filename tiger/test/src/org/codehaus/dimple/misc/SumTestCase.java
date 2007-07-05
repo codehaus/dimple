@@ -10,6 +10,7 @@ public class SumTestCase extends AbstractTestCase {
     double balance();
     double rate();
   }
+  @SuppressWarnings("serial")
   private static class MyAccount implements Serializable {
     private final double balance;
     private final double rate;
@@ -26,6 +27,7 @@ public class SumTestCase extends AbstractTestCase {
     }
     
   }
+  @SuppressWarnings("serial")
   private static class Account extends MyAccount implements DoubleValues {
     public Account(double balance, double rate) {
       super(balance, rate);
@@ -68,6 +70,7 @@ public class SumTestCase extends AbstractTestCase {
     assertEquals(3.0, sum.balance().doubleValue());
     assertEquals(5.0, sum.rate().doubleValue());
   }
+  @SuppressWarnings("serial")
   private static class DoubleRefsImpl implements DoubleRefs, Serializable {
     private final Double balance;
     private final Double rate;

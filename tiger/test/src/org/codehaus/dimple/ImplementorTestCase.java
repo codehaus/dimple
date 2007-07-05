@@ -233,6 +233,7 @@ public class ImplementorTestCase extends AbstractTestCase {
     }
     public String extra(){return null;}
   }
+  @SuppressWarnings("unused")
   public void testImplementedByWillThrowExceptionForExtraMethod(){
     try{
       Class<I1> ret = Implementor.implementedBy(I1.class, ImplWithExtraMethod.class);
